@@ -1,5 +1,7 @@
 ﻿<%@ Page Title="" Language="vb" AutoEventWireup="false" MasterPageFile="~/Trylogyc.Master" CodeBehind="Default.aspx.vb" Inherits="Trylogyc._Default" %>
-
+<%@ MasterType 
+    virtualpath="~/Trylogyc.master" 
+%>
 <asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
     <style type="text/css">
         .badge-bg-red {

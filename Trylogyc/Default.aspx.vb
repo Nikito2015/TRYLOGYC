@@ -13,18 +13,19 @@ Public Class _Default
     Dim sumtotal As Double
     Public preferenceIDMP As String
 
-    Protected Sub page_preinit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit
-        If login.ValidateSessionCookie() = True Then
-        Else
-            Response.Redirect("~/login.aspx")
-        End If
-
-    End Sub
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-
         If login.ValidateSessionCookie() = True Then
+            RefreshMasterData()
+            Dim wf1 As New login()
+            wf1 = CType(Context.Handler, login)
+            Session("IDUsuario") = wf1.IDUsuario
+
+            Session("IDUsuario") = Me.Context.Items("IDUsuario").ToString()
+            Session("dtsocio") = Me.Context.Items("dtsocio")
+            Session("dtsaldo") = Me.Context.Items("dtsaldo")
             Me.divError.Visible = False
             If Not Page.IsPostBack Then
+
                 Dim daUser As DataSet = myContext.GetUsuario(Session("IDUsuario"))
                 If daUser.Tables(0).TableName = "Error" Then
                     Session("codError") = daUser.Tables(0).Rows(0).Item(0)
@@ -38,7 +39,7 @@ Public Class _Default
 
                     lstConexiones.Items.Insert(0, " Todas")
                     lstConexiones.Items.Item(0).Value = 0
-                    Dim dtSocio As DataTable = Session("dtSocio")
+                    Dim dtSocio As DataTable = CType(Me.Context.Items("dtsocio"), DataTable)
 
                     CargarComboConexiones(dtSocio)
                     readFacturas(Session("xmlSocio"), lstConexiones.SelectedValue)
@@ -441,6 +442,31 @@ Public Class _Default
             'lstConexiones.Items.Item(r + 1).Text = strSocio & "-" & strConexion
         Next r
         lstConexiones.SelectedValue = 0
+    End Sub
+
+    Private Sub RefreshMasterData()
+        Me.Master.Usuario = New Models.Usuario()
+        Me.Master.Usuario.IDUsuario = Me.Context.Items("IDUsuario").ToString()
+        Me.Master.Usuario.XmlSocio = Me.Context.Items("xmlSocio").ToString()
+        Me.Master.Usuario.email = Me.Context.Items("userEmail").ToString()
+        Me.Master.Usuario.username = Me.Context.Items("nomUsuario").ToString()
+        Me.Master.Usuario.passWord = Me.Context.Items("Password").ToString()
+        Me.Master.Usuario.foto = Me.Context.Items("Foto").ToString()
+        Dim lblcliente As Label = CType(Page.Master.FindControl("lblcliente"), Label)
+        lblcliente.Text = Me.Master.Usuario.username
+
+        Dim fotocliente2 As Image = CType(Page.Master.FindControl("fotocliente2"), Image)
+        fotocliente2.ImageUrl = Me.Master.Usuario.foto
+
+        Dim lblcliente2 As Label = CType(Page.Master.FindControl("lblcliente2"), Label)
+        lblcliente2.Text = Me.Master.Usuario.username
+
+        Dim lblco1 As Label = CType(Page.Master.FindControl("lblco1"), Label)
+        lblco1.Text = Me.Context.Items("ConCount")
+
+        Dim lblco1txt As Label = CType(Page.Master.FindControl("lblco1txt"), Label)
+        lblco1txt.Text = "Conexiones"
+
     End Sub
 #End Region
 End Class
