@@ -5,8 +5,39 @@ Imports System.IO
 Public Class relaciones
     Inherits System.Web.UI.Page
 
+    Private _IDUsuario As Int32
+    Public Property IDUsuario() As Int32
+        Get
+            Return _IDUsuario
+        End Get
+        Set(ByVal value As Int32)
+            _IDUsuario = value
+        End Set
+    End Property
+    Private _xmlSocio As Int32
+    Public Property xmlSocio() As Int32
+        Get
+            Return _xmlSocio
+        End Get
+        Set(ByVal value As Int32)
+            _xmlSocio = value
+        End Set
+    End Property
+    Private _filtroConexiones As String
+    Public Property filtroConexiones() As String
+        Get
+            Return _filtroConexiones
+        End Get
+        Set(ByVal value As String)
+            _filtroConexiones = value
+        End Set
+    End Property
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not Page.IsPostBack Then
+            IDUsuario = Request.Cookies("IDUsuario").Value
+            xmlSocio = Request.Cookies("xmlSocio").Value
+
             Me.txtcgp.Text = ""
             Me.txtcodsocio.Text = ""
             Me.divError.Visible = False
@@ -88,7 +119,7 @@ Public Class relaciones
         If lblSuccess.Text = "Relación Registrada Exitosamente. Vuelva a Ingresar al Sitio para ver los Cambios" Then
             Response.Redirect("~/login.aspx")
         Else
-            Response.Redirect("~/Default.aspx")
+            Response.Redirect("~/Default.aspx?" & "IDUsuario=" & IDUsuario & "&xmlSocio=" & xmlSocio)
         End If
     End Sub
 End Class

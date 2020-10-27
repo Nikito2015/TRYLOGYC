@@ -6,6 +6,7 @@ Imports MercadoPago.DataStructures.Preference
 Imports MercadoPago.Common
 Imports System.Globalization
 Imports System.Linq
+Imports System.Xml
 
 Public Class _Default
     Inherits System.Web.UI.Page
@@ -25,6 +26,24 @@ Public Class _Default
         If login.ValidateSessionCookie() = True Then
             Me.divError.Visible = False
             If Not Page.IsPostBack Then
+                If Session("IDUsuario") Is Nothing Then
+                    Session("IDUsuario") = Request.Params("IDUsuario")
+                    If Session("IDUsuario") Is Nothing Then
+                        Session("IDUsuario") = Request.Cookies("IDUsuario")
+                    End If
+                End If
+
+                If Session("xmlSocio") Is Nothing Then
+                    Session("xmlSocio") = Request.Params("xmlSocio")
+                    If Session("xmlSocio") Is Nothing Then
+                        Session("xmlSocio") = Request.Cookies("xmlSocio")
+                    End If
+                End If
+                Dim filtroConexiones As String = Request.Cookies("filtroConexiones").Value
+                If Session("dtSocio") Is Nothing Or Session("dtSaldo") Is Nothing Then
+                    RecuperarDtSociosYSaldos(filtroConexiones)
+                End If
+
                 Dim daUser As DataSet = myContext.GetUsuario(Session("IDUsuario"))
                 If daUser.Tables(0).TableName = "Error" Then
                     Session("codError") = daUser.Tables(0).Rows(0).Item(0)
@@ -82,6 +101,9 @@ Public Class _Default
 
         readFacturas(intSocio, intConexion)
         Me.GridView1.Caption = "Facturas Conexión " & lstConexiones.SelectedItem.ToString
+        If Session("dtsocio") Is Nothing Then
+            RecuperarDtSociosYSaldos(Request.Cookies("filtroConexiones").Value)
+        End If
         Dim dv As DataView = New DataView(Session("dtsocio"))
         Me.txtNombre.Text = ""
         Me.txtDireccion.Text = ""
@@ -279,9 +301,9 @@ Public Class _Default
                 Dim idConexion As String = CType(row1.Cells(10), DataControlFieldCell).Text
                 Dim pagoEnProceso As Boolean = VerificarPagoEnProceso(idSocio, idConexion, numfact, importeFactura)
                 If pagoEnProceso = True Then
-                    Response.Redirect("~/ConfirmarPago.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
+                    Response.Redirect(String.Format("~/ConfirmarPago.aspx?numfact={0}&importe={1}&idSocio={2}&idConexion={3}&IDUsuario={4}", LTrim(RTrim(numfact)), importe, idSocio, idConexion, Session("IDUsuario")))
                 Else
-                    Response.Redirect("~/Pagar.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
+                    Response.Redirect(String.Format("~/Pagar.aspx?numfact={0}&importe={1}&idSocio={2}&idConexion={3}&IDUsuario={4}", LTrim(RTrim(numfact)), importe, idSocio, idConexion, Session("IDUsuario")))
                 End If
             End If
         End If
@@ -297,6 +319,9 @@ Public Class _Default
 
     Private Sub readFacturas(ByVal xmlsocio As String, ByVal conexion As Int32)
         Try
+            If Session("dtSaldo") Is Nothing Then
+                RecuperarDtSociosYSaldos(Request.Cookies("filtroConexiones").Value)
+            End If
             Dim dvFacturas As New DataView(Session("dtSaldo"))
             Dim dtFacturas As New DataTable
             Dim dvdtFacturas As New DataTable
@@ -442,5 +467,28 @@ Public Class _Default
         Next r
         lstConexiones.SelectedValue = 0
     End Sub
+
+    Private Function RecuperarDtSociosYSaldos(ByVal filtroConexiones As String) As DataTable
+        Dim xmlFile2 As XmlReader = XmlReader.Create(Server.MapPath("/xmlfiles/SALDOS.xml"), New XmlReaderSettings())
+        Dim ds2 As New DataSet()
+        ds2.ReadXml(xmlFile2)
+        Dim dtSaldos As DataTable = ds2.Tables(0)
+        Dim dvSaldos As New DataView(dtSaldos)
+        dvSaldos.RowFilter = filtroConexiones
+        'dvSaldos.RowFilter = "Socio = " & Session("xmlSocio") & " AND (" & filtroConexiones & ")"
+        Session("dtSaldo") = dvSaldos.ToTable
+        Dim ds As New DataSet()
+        Dim xmlFile = XmlReader.Create(Server.MapPath("/xmlfiles/SOCIOS.xml"), New XmlReaderSettings())
+        ds.ReadXml(xmlFile)
+        'ds2.ReadXml(xmlFile2)
+        Dim dtSocios As DataTable = ds.Tables(0)
+        Dim dvSocios As New DataView(dtSocios)
+        dvSocios.RowFilter = filtroConexiones
+        'dvSocios.RowFilter = "SOCIO = '" & Session("xmlSocio") & "' AND (" & filtroConexiones & ")"
+        Dim conCount As Int32 = dvSocios.Count
+        Session("conCount") = conCount
+        Session("dtSocio") = dvSocios.ToTable
+    End Function
+
 #End Region
 End Class

@@ -16,6 +16,13 @@ Public Class Pagar
     Protected originalUri As String
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        Dim nroFactura As String = Request.Params("numfact")
+        Dim strImport As String = Request.Params("importe")
+        Dim idSocio As Int32 = Request.Params("idSocio")
+        Dim idConexion As Int32 = Request.Params("idConexion")
+        Dim idUsuario As Int32 = Request.Params("IDUsuario")
+        Session("IDUsuario") = idUsuario
+        Session("xmlSocio") = idSocio
         Try
             defaultUrl.Value = HttpContext.Current.Request.UrlReferrer.ToString()
             _isSandbox = Convert.ToBoolean(ConfigurationManager.AppSettings("isSandbox"))
@@ -24,10 +31,7 @@ Public Class Pagar
             _myUri = HttpContext.Current.Request.Url.AbsoluteUri
             _myHost = HttpContext.Current.Request.Url.Host
             ReEvaluarYSetearMercadoPagoToken()
-            Dim nroFactura As String = Request.Params("numfact")
-            Dim strImport As String = Request.Params("importe")
-            Dim idSocio As Int32 = Request.Params("idSocio")
-            Dim idConexion As Int32 = Request.Params("idConexion")
+
             'Nos aseguramos que nadie cambie los valores de la query string manualmente. Si lo hacen lo redirigimos a default.
 
             If IsNothing(HttpContext.Current.Request.UrlReferrer) Then
@@ -35,7 +39,7 @@ Public Class Pagar
             Else
                 If Not IsNothing(HttpContext.Current.Request.UrlReferrer.AbsolutePath) Then
                     If HttpContext.Current.Request.UrlReferrer.AbsolutePath.Equals("/Pagar") Then
-                        Response.Redirect("~/Default.aspx")
+                        Response.Redirect("~/Default.aspx?" & "IDUsuario=" & idUsuario & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
                     End If
                 End If
             End If
@@ -47,7 +51,7 @@ Public Class Pagar
                                  NumberStyles.AllowDecimalPoint,
                                  CultureInfo.CreateSpecificCulture("fr-FR"),
                                  importeFactura) = False) Then
-                Response.Redirect("~/Default.aspx")
+                Response.Redirect("~/Default.aspx?" & "IDUsuario=" & idUsuario & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
             End If
             'Dim preferencia As String = GenerarPreferenciaPagoMercadoPago(nroFactura, importeFactura, Nothing)
             'Crear Pago
@@ -75,7 +79,7 @@ Public Class Pagar
 
         Catch ex As Exception
             If String.IsNullOrEmpty(Session("txtError")) = True Then
-                Response.Redirect("~/Default.aspx")
+                Response.Redirect("~/Default.aspx?" & "IDUsuario=" & idUsuario & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
             Else
                 Response.Redirect("~/Error.aspx")
             End If
@@ -106,9 +110,9 @@ Public Class Pagar
         itemToAdd.UnitPrice = importeFactura
         myPreference.Items.Add(itemToAdd)
         Dim _backUrls As New BackUrls()
-        _backUrls.Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoExitoso.aspx?IDUsuario=" & Session("IDUsuario"))
-        _backUrls.Failure = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoRechazado.aspx?IDUsuario=" & Session("IDUsuario"))
-        _backUrls.Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoPendiente.aspx?IDUsuario=" & Session("IDUsuario"))
+        _backUrls.Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", String.Format("/PagoExitoso.aspx?IDUsuario={0}&xmlSocio={1}", Session("IDUsuario").ToString(), Session("xmlSocio").ToString()))
+        _backUrls.Failure = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", String.Format("/PagoRechazado.aspx?IDUsuario={0}&xmlSocio={1}", Session("IDUsuario").ToString(), Session("xmlSocio").ToString()))
+        _backUrls.Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", String.Format("/PagoPendiente.aspx?IDUsuario={0}&xmlSocio={1}", Session("IDUsuario").ToString(), Session("xmlSocio").ToString()))
         myPreference.BackUrls = _backUrls
         myPreference.AutoReturn = AutoReturnType.all
         myPreference.BinaryMode = True

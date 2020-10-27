@@ -88,7 +88,27 @@ Public Class login
                         Dim conCount As Int32 = dvSocios.Count
                         Session("conCount") = conCount
                         Session("dtSocio") = dvSocios.ToTable
-                        Response.Redirect(myUser.ruta)
+                        'Cookie con el filtro de conexiones
+                        Dim sessionTimeOut As Int32 = Convert.ToInt32(ConfigurationManager.AppSettings("SessionTimeOut").ToString())
+                        Dim cookie As HttpCookie
+                        cookie = New HttpCookie("filtroConexiones")
+                        cookie.Value = filtroConexiones
+                        cookie.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+                        Response.Cookies.Add(cookie)
+
+                        Dim cookie2 As HttpCookie
+                        cookie2 = New HttpCookie("IDUsuario")
+                        cookie2.Value = myUser.IDUsuario
+                        cookie2.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+                        Response.Cookies.Add(cookie2)
+
+                        Dim cookie3 As HttpCookie
+                        cookie3 = New HttpCookie("xmlSocio")
+                        cookie3.Value = myUser.XmlSocio
+                        cookie3.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+                        Response.Cookies.Add(cookie3)
+                        Response.Redirect(String.Format("{0}?IDUsuario={1}&xmlSocio={2}&userName={3}", myUser.ruta, myUser.IDUsuario, myUser.XmlSocio, myUser.username))
+                        'Response.Redirect(myUser.ruta & "?IDUsuario=" & myUser.IDUsuario & "&xmlSocio=" & myUser.XmlSocio & "&userName=" & myUser.username)
                     Else
                         lblError.Text = "Datos de Ingreso erróneos"
                         lblError.Visible = True
