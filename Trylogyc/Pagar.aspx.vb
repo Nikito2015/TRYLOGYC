@@ -106,9 +106,9 @@ Public Class Pagar
         itemToAdd.UnitPrice = importeFactura
         myPreference.Items.Add(itemToAdd)
         Dim _backUrls As New BackUrls()
-        _backUrls.Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoExitoso.aspx")
-        _backUrls.Failure = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoRechazado.aspx")
-        _backUrls.Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoPendiente.aspx")
+        _backUrls.Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoExitoso.aspx?IDUsuario=" & Session("IDUsuario"))
+        _backUrls.Failure = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoRechazado.aspx?IDUsuario=" & Session("IDUsuario"))
+        _backUrls.Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/Pagar", "/PagoPendiente.aspx?IDUsuario=" & Session("IDUsuario"))
         myPreference.BackUrls = _backUrls
         myPreference.AutoReturn = AutoReturnType.all
         myPreference.BinaryMode = True
