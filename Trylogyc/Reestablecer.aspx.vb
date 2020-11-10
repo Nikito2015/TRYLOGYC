@@ -20,32 +20,39 @@ Public Class Reestablecer
         Dim email As String = Request.Form("email")
         Dim codigo = Request.Form("codigo")
 
-        '1.Setear endpoint
-        Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "RetrievePassword")
-        '2.Crear clase Request.
-        Dim retrievePasswordRequest As New RetrievePasswordRequest
-        retrievePasswordRequest.Email = email
-        retrievePasswordRequest.CGP = codigo
+        Try
+            '1.Setear endpoint
+            Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "RetrievePassword")
+            '2.Crear clase Request.
+            Dim retrievePasswordRequest As New RetrievePasswordRequest
+            retrievePasswordRequest.Email = email
+            retrievePasswordRequest.CGP = codigo
 
 
-        Dim serializedRequest As String = JsonConvert.SerializeObject(retrievePasswordRequest)
+            Dim serializedRequest As String = JsonConvert.SerializeObject(retrievePasswordRequest)
 
-        '3.Invocar Servicio
-        Dim responseMessage As HttpResponseMessage = Task.Run(Function()
-                                                                  Return APIHelpers.PostAsync(apiEndpoint, serializedRequest, 60, Nothing)
-                                                              End Function).Result
-        '4. Deserializar respuesta
-        Dim registerResponse As RetrievePasswordResponse = JsonConvert.DeserializeObject(Of RetrievePasswordResponse)(responseMessage.Content.ReadAsStringAsync().Result)
+            '3.Invocar Servicio
+            Dim responseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                      Return APIHelpers.PostAsync(apiEndpoint, serializedRequest, 60, Nothing)
+                                                                  End Function).Result
+            '4. Deserializar respuesta
+            Dim registerResponse As RetrievePasswordResponse = JsonConvert.DeserializeObject(Of RetrievePasswordResponse)(responseMessage.Content.ReadAsStringAsync().Result)
 
-        If registerResponse.StatusCode = HttpStatusCode.OK Then
-            lblError.Text = "Datos correctos.Recibirá sus claves por email."
-            lblError.ForeColor = Drawing.Color.Green
-            lblError.Visible = True
-        Else
+            If registerResponse.StatusCode = HttpStatusCode.OK Then
+                lblError.Text = "Datos correctos.Recibirá sus claves por email."
+                lblError.ForeColor = Drawing.Color.Green
+                lblError.Visible = True
+            Else
+                lblError.ForeColor = Drawing.Color.Red
+                lblError.Text = registerResponse.Message
+                lblError.Visible = True
+            End If
+        Catch ex As Exception
             lblError.ForeColor = Drawing.Color.Red
-            lblError.Text = registerResponse.Message
+            lblError.Text = "Ocurrieron Errores durante la operación"
             lblError.Visible = True
-        End If
+        End Try
+
 
 
     End Sub
