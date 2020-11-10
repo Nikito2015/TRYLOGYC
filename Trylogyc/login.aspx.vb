@@ -4,22 +4,18 @@ Imports System.IO
 Imports System.Xml
 Imports System.Net
 Imports System.Reflection
+Imports CommonTrylogycWebsite.ServiceResponses
+Imports CommonTrylogycWebsite.ServiceRequests
+Imports Helpers
+Imports Newtonsoft.Json
+Imports System.Net.Http
+Imports CommonTrylogycWebsite.Models
+Imports System.Threading.Tasks
 
 Public Class login
     Inherits System.Web.UI.Page
 
-#Region "Properties"
-    Private _IDUsuario As Int32
-    Public Property IDUsuario() As Int32
-        Get
-            Return _IDUsuario
-        End Get
-        Set(ByVal value As Int32)
-            _IDUsuario = value
-        End Set
-    End Property
-
-#End Region
+#Region "Eventos"
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'login.ValidateSessionCookie() = False
         HttpContext.Current.Request.Cookies.Remove("SessionId")
@@ -27,60 +23,50 @@ Public Class login
 
     Protected Sub btnlogin_Click(sender As Object, e As EventArgs) Handles btnlogin.Click
 
-        '1.Instanciar Servicio
-        Dim proxy As New WcfTrylogycWebsite.ServiceClient()
-        '2.Crear clase Request.
-        Dim loginRequest As New WcfTrylogycWebsite.LoginRequest()
+        '1.Setear Endpoint
+        Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "login")
+        '2.Crear clase Request
+        Dim loginRequest As New LoginRequest()
 
         loginRequest.Password = Me.txtpassword.Text
         loginRequest.Email = Me.txtemail.Text
+        Dim serializedLoginRequest As String = JsonConvert.SerializeObject(loginRequest)
 
         '3.Invocar Servicio
-        Dim loginResponse As WcfTrylogycWebsite.LoginResponse = proxy.Login(loginRequest)
+        Dim loginResponseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                       Return APIHelpers.PostAsync(apiEndpoint, serializedLoginRequest, 60, Nothing)
+                                                                   End Function).Result
+        '4. Deserializar respuesta
+        Dim loginApiResponse As LoginResponse = JsonConvert.DeserializeObject(Of LoginResponse)(loginResponseMessage.Content.ReadAsStringAsync().Result)
 
-        If loginResponse.StatusCode = HttpStatusCode.OK Then
+        If loginApiResponse.StatusCode = HttpStatusCode.OK Then
+
             CreateSessionCookie()
-            'Session("IDUsuario") = loginResponse.User.Id
-            IDUsuario = loginResponse.User.Id
-            'Session("xmlSocio") = loginResponse.User.Associates.FirstOrDefault().Id
-            Me.Context.Items("xmlSocio") = loginResponse.User.Associates.FirstOrDefault().Id
-            'Session("nomUsuario") = loginResponse.User.UserName
-            Me.Context.Items("nomUsuario") = loginResponse.User.UserName
-            'Session("userEmail") = loginResponse.User.Email
-            Me.Context.Items("userEmail") = loginResponse.User.Email
-            'Session("aceptaFacturaMail") = loginResponse.User.EmailInvoice
-            Me.Context.Items("aceptaFacturaMail") = loginResponse.User.EmailInvoice
-            'Session("conCount") = loginResponse.User.TotalConnections
-            Me.Context.Items("conCount") = loginResponse.User.TotalConnections
-            'Session("dtSocio") = CreateDataTableAssociates(loginResponse.User.Associates)
-            Me.Context.Items("dtSocio") = CreateDataTableAssociates(loginResponse.User.Associates)
-            'Session("dtSaldo") = CreateDataTableBalances(loginResponse.User.Balances)
-            Me.Context.Items("dtSaldo") = CreateDataTableBalances(loginResponse.User.Balances)
-            'Session("Foto") = loginResponse.User.Picture
-            Me.Context.Items("Foto") = loginResponse.User.Picture
-            'Session("Password") = loginResponse.User.Password
-            Me.Context.Items("Password") = loginResponse.User.Password
-            'Session("Token") = loginResponse.Token
-            Me.Context.Items("Token") = loginResponse.Token
-            '(CType(Me.Master, Trylogyc)).strName
-            Server.Transfer(loginResponse.User.Route, True)
-            'Response.Redirect(loginResponse.User.Route)
+            CreateCookie("IDUsuario", loginApiResponse.User.Id)
+            CreateCookie("xmlSocio", loginApiResponse.User.Associates.FirstOrDefault().Id)
+            CreateCookie("nomUsuario", loginApiResponse.User.UserName)
+            CreateCookie("userEmail", loginApiResponse.User.Email)
+            CreateCookie("aceptaFacturaMail", loginApiResponse.User.EmailInvoice)
+            CreateCookie("conCount", loginApiResponse.User.TotalConnections)
+            CreateCookie("Foto", loginApiResponse.User.Picture)
+            CreateCookie("Token", loginApiResponse.Token)
+            Response.Redirect(loginApiResponse.User.Route)
         Else
-            lblError.Text = loginResponse.Message
+            lblError.Text = loginApiResponse.Message
             lblError.Visible = True
         End If
 
     End Sub
+#End Region
 
-#Region "Metodos privados"
-
+#Region "Métodos Públicos"
     ''' <summary>
     ''' Creates the data table associates.
     ''' </summary>
     ''' <param name="associates">The associates.</param>
     ''' <returns></returns>
-    Private Function CreateDataTableAssociates(ByVal associates As WcfTrylogycWebsite.WcfAssociate()) As DataTable
-        Dim associatesList = associates.[Select](Function(elem) New With {
+    Public Shared Function CreateDataTableAssociates(ByVal associates As WcfAssociate()) As DataTable
+        Dim associatesList = associates?.[Select](Function(elem) New With {
         Key .Socio = elem.Id,
         Key .Conexion = elem.ConnectionId,
         Key .CGP = elem.CGP,
@@ -111,8 +97,8 @@ Public Class login
     ''' </summary>
     ''' <param name="balances">The balances.</param>
     ''' <returns></returns>
-    Private Function CreateDataTableBalances(ByVal balances As WcfTrylogycWebsite.WcfBalance()) As DataTable
-        Dim balancesList = balances.[Select](Function(elem) New With {
+    Public Shared Function CreateDataTableBalances(ByVal balances As WcfBalance()) As DataTable
+        Dim balancesList = balances?.[Select](Function(elem) New With {
             Key .Socio = elem.AssociateId,
             Key .Conexion = elem.ConnectionId,
             Key .Periodo = elem.Period,
@@ -150,17 +136,15 @@ Public Class login
         Next
         CreateDataTableBalances = dtBalances
     End Function
+#End Region
+
+#Region "Metodos privados"
 
     ''' <summary>
     ''' Creates the session cookie.
     ''' </summary>
     Private Sub CreateSessionCookie()
-        Dim sessionTimeOut As Int32 = Convert.ToInt32(ConfigurationManager.AppSettings("SessionTimeOut").ToString())
-        Dim cookie As HttpCookie
-        cookie = New HttpCookie("SessionId")
-        cookie.Value = Guid.NewGuid().ToString()
-        cookie.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
-        HttpContext.Current.Response.Cookies.Add(cookie)
+        CreateCookie("SessionId", Guid.NewGuid().ToString())
     End Sub
 
     ''' <summary>
@@ -178,5 +162,20 @@ Public Class login
             ValidateSessionCookie = True
         End If
     End Function
+
+    ''' <summary>
+    ''' Creates the cookie.
+    ''' </summary>
+    ''' <param name="name">The name.</param>
+    ''' <param name="value">The value.</param>
+    Public Shared Sub CreateCookie(ByVal name As String, ByVal value As Object)
+        HttpContext.Current.Response.Cookies.Remove(name)
+        Dim sessionTimeOut As Int32 = Convert.ToInt32(ConfigurationManager.AppSettings("SessionTimeOut").ToString())
+        Dim cookie As HttpCookie
+        cookie = New HttpCookie(name)
+        cookie.Value = value
+        cookie.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+        HttpContext.Current.Response.Cookies.Add(cookie)
+    End Sub
 #End Region
 End Class

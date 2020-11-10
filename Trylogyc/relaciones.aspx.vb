@@ -2,6 +2,14 @@
 Imports System.Xml
 Imports System.Linq
 Imports System.IO
+Imports CommonTrylogycWebsite.ServiceRequests
+Imports Newtonsoft.Json
+Imports System.Net.Http
+Imports CommonTrylogycWebsite.ServiceResponses
+Imports System.Net
+Imports System.Threading.Tasks
+Imports Helpers
+
 Public Class relaciones
     Inherits System.Web.UI.Page
 
@@ -21,67 +29,40 @@ Public Class relaciones
         Dim codigo = Me.txtcodsocio.Text
         Dim cgp = Me.txtcgp.Text
 
-        If Len(codigo) = 10 Then
-            Dim IDSocio As Int32
-            Dim IDConexion As Int32
-            'Dim cntSocio As Int32
-            IDSocio = Convert.ToInt32(Mid(Me.txtcodsocio.Text, 1, 6))
-            IDConexion = Convert.ToInt32(Mid(Me.txtcodsocio.Text, 8, 4))
-            'ir a la base y revisar que ese xmlSocio no tenga un usuario ya asignado.
-            Dim checkSocio = myContext.GetSocios() 'validar que el nro. de socio ingresado corresponda a un socio
-            If checkSocio.Tables(0).TableName = "Error" Then
-                Session("codError") = checkSocio.Tables(0).Rows(0).Item(0)
-                Session("txtError") = checkSocio.Tables(0).Rows(0).Item(1)
-                Me.lblError.Text = "Error" & checkSocio.Tables(0).Rows(0).Item(0)
+        Try
+            '1.Setear Endpoint
+            Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "AddRelation")
+            '2.Crear clase Request
+            Dim addRelationRequest As New AddRelationRequest()
+
+            addRelationRequest.CGP = Me.txtcgp.Text
+            addRelationRequest.AssociateCode = Me.txtcodsocio.Text
+            addRelationRequest.UserId = Request.Cookies("IDUsuario")?.Value?.ToString()
+            Dim serializedAddRelationRequest As String = JsonConvert.SerializeObject(addRelationRequest)
+
+            '3.Invocar Servicio
+            Dim addRelationResponseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                                 Return APIHelpers.PostAsync(apiEndpoint, serializedAddRelationRequest, 60, Nothing)
+                                                                             End Function).Result
+            '4. Deserializar respuesta
+            Dim addRelationResponse As AddRelationResponse = JsonConvert.DeserializeObject(Of AddRelationResponse)(addRelationResponseMessage.Content.ReadAsStringAsync().Result)
+
+            If addRelationResponse.StatusCode = HttpStatusCode.OK Then
+                divSuccess.Visible = True
+                divError.Visible = False
+                lblSuccess.Text = "Relación Registrada Exitosamente. Vuelva a Ingresar al Sitio para ver los Cambios"
             Else
-                Dim encontrado = False
-                If checkSocio.Tables(0) IsNot Nothing Then
-                    For Each r In checkSocio.Tables(0).Rows
-                        If Convert.ToInt32(r.Item(0)) = IDSocio And
-                                Convert.ToInt32(r.Item(1)) = IDConexion Then
-                            encontrado = True
-                            If r.Item(2) = cgp Then 'Para dicho socio y conexion que coincida el CGP
-                                'registrar relacion
-                                Dim dsnewrel As DataSet
-                                dsnewrel = myContext.PutRelacion(Session("IDUsuario"), IDSocio, IDConexion)
-
-                                If dsnewrel.Tables.Count > 0 Then
-                                    divSuccess.Visible = False
-                                    divError.Visible = True
-                                    lblError.Text = "No se ha podido completar la operación"
-
-                                Else
-                                    divSuccess.Visible = True
-                                    divError.Visible = False
-                                    lblSuccess.Text = "Relación Registrada Exitosamente. Vuelva a Ingresar al Sitio para ver los Cambios"
-
-                                End If
-                            Else
-                                divSuccess.Visible = False
-                                divError.Visible = True
-                                lblError.Text = "Los datos ingresados son incorrectos"
-                            End If
-                        End If
-
-
-                    Next
-                    If encontrado = False Then
-                        divSuccess.Visible = False
-                        divError.Visible = True
-                        lblError.Text = "Los datos ingresados son incorrectos"
-                    End If
-                Else
-                    divSuccess.Visible = False
-                    divError.Visible = True
-                    lblError.Text = "Los datos ingresados son incorrectos"
-                End If
+                divSuccess.Visible = False
+                divError.Visible = True
+                lblError.Text = addRelationResponse.Message
             End If
-        Else
+        Catch ex As Exception
             divSuccess.Visible = False
             divError.Visible = True
-            lblError.Text = "Los datos ingresados son incorrectos"
+            lblError.Text = "Ocurrieron errores al crear la relación."
+        End Try
 
-        End If
+
     End Sub
 
     Protected Sub btnVolver_Click(sender As Object, e As EventArgs) Handles btnVolver.Click

@@ -3,6 +3,14 @@ Imports System.Xml
 Imports System.Linq
 Imports System.IO
 Imports Trylogyc.Models
+Imports TrylogycWebsite.Common.ServiceRequests
+Imports Newtonsoft.Json
+Imports System.Net.Http
+Imports System.Threading.Tasks
+Imports TrylogycWebsite.Common.ServiceResponses
+Imports System.Net
+Imports Helpers
+
 Public Class UsuarioModif
     Inherits System.Web.UI.Page
 
@@ -10,76 +18,48 @@ Public Class UsuarioModif
         divError.Visible = False
         divSuccess.Visible = False
         If Not Page.IsPostBack Then
-            aceptaEmail.Checked = Convert.ToBoolean(Session("aceptaFacturaMail"))
+            aceptaEmail.Checked = Convert.ToBoolean(Request.Cookies("aceptaFacturaMail").Value)
 
         End If
 
     End Sub
 
     Protected Sub btnSavePass_Click(sender As Object, e As EventArgs) Handles btnSavePass.Click
-        Dim myContext As New TrylogycContext
-        Dim daUser As DataSet = myContext.GetUsuarioNombre(Session("nomUsuario"))
-        Dim myUser = New Usuario
-        If daUser IsNot Nothing Then
-            If daUser.Tables(0).TableName = "Error" Then
-                lblError.Text = "Error: " & daUser.Tables(0).Rows(0).Item(0)
-                divError.Visible = True
-                divSuccess.Visible = False
-            Else
-                If daUser.Tables(0).Rows.Count > 0 Then 'Existe un usuario para dicho codigo de socio
-                    myUser.passWord = daUser.Tables(0).Rows(0).Item("userPass")
-                    myUser.IDUsuario = daUser.Tables(0).Rows(0).Item("IDUsuario")
+        '1.Setear Endpoint
+        Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "UpdateUserData")
+        '2.Crear clase Request
+        Dim userRequest As New UsuarioModifRequest()
 
-                    myUser.EnviarFacturaEmail = Me.aceptaEmail.Checked
+        userRequest.OldPassword = Me.txtpassWordOld.Text
+        userRequest.UserName = Request.Cookies("nomUsuario").Value
+        userRequest.NewPassword = Me.txtPassWordNew.Text
+        userRequest.NewPasswordConfirm = Me.txtPassWordNewCnf.Text
+        userRequest.SendInvoiceEmail = Me.aceptaEmail.Checked
 
-                    If String.IsNullOrEmpty(txtpassWordOld.Text) AndAlso
-                                String.IsNullOrEmpty(txtPassWordNew.Text) AndAlso
-                                    String.IsNullOrEmpty(txtPassWordNewCnf.Text) Then
-                        'No modificó los datos ni ingresó password
-                        Me.txtpassWordOld.Text = myUser.passWord
-                        Me.txtPassWordNew.Text = myUser.passWord
-                        Me.txtPassWordNewCnf.Text = myUser.passWord
-                    End If
+        Dim serializedLoginRequest As String = JsonConvert.SerializeObject(userRequest)
 
-                    If Me.txtpassWordOld.Text = myUser.passWord Then 'la contraseña coincide
-                        If Me.txtPassWordNew.Text = Me.txtPassWordNewCnf.Text And Len(Me.txtPassWordNew.Text) > 5 Then
-                            myUser.passWord = Me.txtPassWordNew.Text
-                            Dim daPass As DataSet = myContext.UpdUsuario(myUser)
-                            If daPass IsNot Nothing Then
-                                If daUser.Tables(0).TableName = "Error" Then
-                                    lblError.Text = "Error: " & daUser.Tables(0).Rows(0).Item("IDUsuario")
-                                    divError.Visible = True
-                                    divSuccess.Visible = False
-                                Else
-                                    Session("aceptaFacturaMail") = aceptaEmail.Checked
-                                    divError.Visible = False
-                                    divSuccess.Visible = True
-                                    lblSuccess.Text = "Datos actualizados exitosamente"
-                                    txtPassWordNew.Text = ""
-                                    txtPassWordNewCnf.Text = ""
-                                    txtpassWordOld.Text = ""
-                                End If
-                            End If
-                        Else
-                            lblError.Text = "La contraseña debe tener al menos 6 caracteres alfanuméricos"
-                            divError.Visible = True
-                            divSuccess.Visible = False
-                        End If
+        '3.Invocar Servicio
+        Dim userApiResponse As HttpResponseMessage = Task.Run(Function()
+                                                                  Return APIHelpers.PostAsync(apiEndpoint, serializedLoginRequest, 60, Nothing)
+                                                              End Function).Result
+        '4. Deserializar respuesta
+        Dim userResponse As UsuarioModifResponse = JsonConvert.DeserializeObject(Of UsuarioModifResponse)(userApiResponse.Content.ReadAsStringAsync().Result)
 
-                    Else
-                        lblError.Text = "La contraseña no es correcta"
-                            divError.Visible = True
-                            divSuccess.Visible = False
-                        End If
-                    Else  'Chequear si el codigo de socio ingresado existe en listado de socios, caso afirmativo redireccionar a registro.
-                        lblError.Text = "No existe Usuario"
-                    divError.Visible = True
-                    divSuccess.Visible = False
-                End If
-            End If
-
-
+        '5 EValuar Respuesta
+        If userResponse.StatusCode = HttpStatusCode.OK Then
+            login.CreateCookie("aceptaFacturaMail", Me.aceptaEmail.Checked)
+            divError.Visible = False
+            divSuccess.Visible = True
+            lblSuccess.Text = userResponse.Message
+            txtPassWordNew.Text = ""
+            txtPassWordNewCnf.Text = ""
+            txtpassWordOld.Text = ""
+        Else
+            lblError.Text = userResponse.Message
+            divError.Visible = True
+            divSuccess.Visible = False
         End If
+
     End Sub
 
     Protected Sub btnVolver_Click(sender As Object, e As EventArgs) Handles btnVolver.Click

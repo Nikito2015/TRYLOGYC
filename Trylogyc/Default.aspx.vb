@@ -6,6 +6,12 @@ Imports MercadoPago.DataStructures.Preference
 Imports MercadoPago.Common
 Imports System.Globalization
 Imports System.Linq
+Imports CommonTrylogycWebsite.ServiceRequests
+Imports CommonTrylogycWebsite.ServiceResponses
+Imports Newtonsoft.Json
+Imports System.Net.Http
+Imports System.Threading.Tasks
+Imports Helpers
 
 Public Class _Default
     Inherits System.Web.UI.Page
@@ -13,39 +19,40 @@ Public Class _Default
     Dim sumtotal As Double
     Public preferenceIDMP As String
 
+    Private _dtSocios As DataTable
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If login.ValidateSessionCookie() = True Then
             RefreshMasterData()
-            Dim wf1 As New login()
-            wf1 = CType(Context.Handler, login)
-            Session("IDUsuario") = wf1.IDUsuario
+            '1.Setear endpoint
+            Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "GetUserAssociates")
+            '2.Crear clase Request.
+            Dim userAssociatesRequest As New UserAssociatesAndBalancesRequest()
 
-            Session("IDUsuario") = Me.Context.Items("IDUsuario").ToString()
-            Session("dtsocio") = Me.Context.Items("dtsocio")
-            Session("dtsaldo") = Me.Context.Items("dtsaldo")
+            userAssociatesRequest.UserId = Convert.ToInt32(Request.Cookies("IDUsuario").Value)
+            Dim serializedRequest As String = JsonConvert.SerializeObject(userAssociatesRequest)
+
+            '3.Invocar Servicio
+            Dim responseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                      Return APIHelpers.PostAsync(apiEndpoint, serializedRequest, 60, Nothing)
+                                                                  End Function).Result
+            '4. Deserializar respuesta
+            Dim apiResponse As UserAssociatesResponse = JsonConvert.DeserializeObject(Of UserAssociatesResponse)(responseMessage.Content.ReadAsStringAsync().Result)
+            hidden_dtSocios.Value = responseMessage.Content.ReadAsStringAsync().Result
             Me.divError.Visible = False
             If Not Page.IsPostBack Then
 
-                Dim daUser As DataSet = myContext.GetUsuario(Session("IDUsuario"))
-                If daUser.Tables(0).TableName = "Error" Then
-                    Session("codError") = daUser.Tables(0).Rows(0).Item(0)
-                    Session("txtError") = daUser.Tables(0).Rows(0).Item(1)
-                    Response.Redirect("~/Error.aspx")
-                Else
-                    ''traer listado de socio-conexion de la tabla
-                    'traer listado de conexiones para el socio
-#Region "NUEVO METODO"
+                ''traer listado de socio-conexion de la tabla
+                'traer listado de conexiones para el socio
 
+                lstConexiones.Items.Insert(0, " Todas")
+                lstConexiones.Items.Item(0).Value = 0
+                'Recuperar tabla de socios para el idUsuario en el servicio wcf
+                Dim dtSocio As DataTable = login.CreateDataTableAssociates(apiResponse?.Associates?.ToArray())
+                DtSocios = dtSocio
+                CargarComboConexiones(dtSocio)
+                readFacturas(Request.Cookies("xmlSocio").Value, lstConexiones.SelectedValue)
+                'Me.txtDeudatotal.Text = Format((sumtotal), "0.00")
 
-                    lstConexiones.Items.Insert(0, " Todas")
-                    lstConexiones.Items.Item(0).Value = 0
-                    Dim dtSocio As DataTable = CType(Me.Context.Items("dtsocio"), DataTable)
-
-                    CargarComboConexiones(dtSocio)
-                    readFacturas(Session("xmlSocio"), lstConexiones.SelectedValue)
-                    'Me.txtDeudatotal.Text = Format((sumtotal), "0.00")
-#End Region
-                End If
 
                 GridView1.DataBind()
                 'Ocultar/Mostrar columna "Pagar"
@@ -83,7 +90,8 @@ Public Class _Default
 
         readFacturas(intSocio, intConexion)
         Me.GridView1.Caption = "Facturas Conexión " & lstConexiones.SelectedItem.ToString
-        Dim dv As DataView = New DataView(Session("dtsocio"))
+        Dim bufferedApiResponse As UserAssociatesResponse = JsonConvert.DeserializeObject(Of UserAssociatesResponse)(hidden_dtSocios.Value)
+        Dim dv As DataView = New DataView(login.CreateDataTableAssociates(bufferedApiResponse?.Associates?.ToArray()))
         Me.txtNombre.Text = ""
         Me.txtDireccion.Text = ""
         Me.txtLocalidad.Text = ""
@@ -148,121 +156,51 @@ Public Class _Default
             Dim index1 As Integer = Convert.ToInt32(e.CommandArgument) 'captura el valor del índice de la fila
             Dim row1 As GridViewRow = GridView1.Rows(index1) 'crea un objeto row que contiene la fila del botón presionado.
             Dim socio As Int32 = Convert.ToInt32(CType(row1.Cells(13), DataControlFieldCell).Text)
-            Dim numfact As String = socio.ToString.PadLeft(6, "0") &
-                    CType(row1.Cells(10), DataControlFieldCell).Text.PadLeft(4, "0") &
-                        CType(row1.Cells(2), DataControlFieldCell).Text
+            Dim conexion As Int32 = Convert.ToInt32(CType(row1.Cells(10), DataControlFieldCell).Text)
+            Dim numFact = CType(row1.Cells(2), DataControlFieldCell).Text
 
-            Dim filePDF As String = "~/PDF/" & LTrim(RTrim(numfact)) & ".pdf"
-            Dim filePDF2 As String = "PDF/" & LTrim(RTrim(numfact)) & ".pdf"
-            Dim retrieveFromFtp As Boolean = Convert.ToBoolean(ConfigurationManager.AppSettings("retrievePdfFromFTP").ToString())
+            'Recuperar pdf en formato bytes de base64 del wcf
+            '1.Setear endpoint
+            Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "RecuperarPdfFactura")
+            '2.Crear clase Request.
+            Dim pdfRequest As New InvoicePdfRequest()
+
+            pdfRequest.AssociateId = socio
+            pdfRequest.ConnectionId = conexion
+            pdfRequest.InvoiceNumber = numFact
+            pdfRequest.RetrieveFromFTP = Convert.ToBoolean(ConfigurationManager.AppSettings("retrievePdfFromFTP").ToString())
+            Dim serializedRequest As String = JsonConvert.SerializeObject(pdfRequest)
+
+
+            '3.Invocar Servicio
             Try
-                Dim myrequest As New WebClient()
-                ' Establecer Credenciales para acceder a la carpeta
-                myrequest.Credentials = New NetworkCredential(System.Configuration.ConfigurationManager.AppSettings("ftpUser").ToString(), System.Configuration.ConfigurationManager.AppSettings("ftpPassWord").ToString())
-                'Read the file data into a Byte array
+                '3.Invocar Servicio
+                Dim responseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                          Return APIHelpers.PostAsync(apiEndpoint, serializedRequest, 60, Nothing)
+                                                                      End Function).Result
+                '4. Deserializar respuesta
+                Dim pdfResponse As InvoicePdfResponse = JsonConvert.DeserializeObject(Of InvoicePdfResponse)(responseMessage.Content.ReadAsStringAsync().Result)
 
-                Dim myAddress As String = ""
-                If System.Configuration.ConfigurationManager.AppSettings("ftpAddress").ToString().Length < 1 Then
-                    myAddress = Server.MapPath("/PDF/")
+
+                If pdfResponse.StatusCode = HttpStatusCode.OK Then
+
+                    'Convertir array base64 en archivo .pdf en ruta temporal. Luego el mismo es recuperado por nombre desde la vista showPdf.aspx
+                    Dim targetPath As String = Server.MapPath("~/_tmp/" & LTrim(RTrim(numFact)) & ".pdf")
+                    Dim bytes As Byte() = Convert.FromBase64String(pdfResponse.InvoicePdf)
+                    Dim stream As System.IO.FileStream = New FileStream(targetPath, FileMode.CreateNew)
+                    Dim writer As System.IO.BinaryWriter = New BinaryWriter(stream)
+                    writer.Write(bytes, 0, bytes.Length)
+                    writer.Close()
+                    writer.Dispose()
+                    stream.Close()
+                    stream.Dispose()
+                    login.CreateCookie("fileName", LTrim(RTrim(numFact)) & ".pdf")
+                    Response.Redirect("~/showPdf.aspx")
+
                 Else
-                    myAddress = System.Configuration.ConfigurationManager.AppSettings("ftpAddress").ToString()
+                    Me.lblError.Text = pdfResponse.Message
+                    Me.divError.Visible = True
                 End If
-                If (Not System.IO.Directory.Exists(Server.MapPath("~/_tmp"))) Then
-                    System.IO.Directory.CreateDirectory(Server.MapPath("~/_tmp"))
-                End If
-
-#Region "Prueba Ricardo FtpWebRequest, funciona OK localmente, igual que el caso siguiente."
-                'PRUEBA RICARDO
-                'Dim _request As System.Net.FtpWebRequest = System.Net.WebRequest.Create(myAddress)
-                If retrieveFromFtp = True Then
-                    Dim _request As Net.FtpWebRequest = Net.FtpWebRequest.Create(myAddress & LTrim(RTrim(numfact)) & ".pdf")
-                    _request.KeepAlive = False
-                    _request.UsePassive = True
-                    _request.Timeout = 6000000
-                    _request.Method = System.Net.WebRequestMethods.Ftp.DownloadFile
-                    _request.Credentials = New NetworkCredential(System.Configuration.ConfigurationManager.AppSettings("ftpUser").ToString(), System.Configuration.ConfigurationManager.AppSettings("ftpPassWord").ToString())
-                    Dim _response As System.Net.FtpWebResponse = _request.GetResponse()
-                    Using fs As FileStream = File.Create(HttpContext.Current.Server.MapPath("/_tmp/") & LTrim(RTrim(numfact)) & ".pdf")
-                        _response.GetResponseStream.CopyTo(fs)
-                    End Using
-                Else
-                    Dim targetPath As String = Server.MapPath("~/_tmp/" & LTrim(RTrim(numfact)) & ".pdf")
-                    Dim fileName As String = System.IO.Path.GetFileName(Server.MapPath("/PDF/") & LTrim(RTrim(numfact)) & ".pdf")
-
-                    File.Copy(Server.MapPath("~/PDF/" & fileName), targetPath, True)
-                End If
-
-                'Dim responseStream As System.IO.Stream = _response.GetResponseStream().CopyTo(File.Create())
-
-                'Dim bytes() As Byte = myrequest.DownloadData(myAddress & LTrim(RTrim(numfact)) & ".pdf")
-                'Dim DownloadStream As FileStream = System.IO.File.Create(HttpContext.Current.Server.MapPath("~/_tmp/") & LTrim(RTrim(numfact)) & ".pdf")
-                'DownloadStream.Write(bytes, 0, bytes.Length)
-                'DownloadStream.Close()
-                ''Dim fs As New System.IO.FileStream(HttpContext.Current.Server.MapPath("~/_tmp/") & LTrim(RTrim(numfact)) & ".pdf", System.IO.FileMode.Create)
-                ''responseStream.CopyTo(fs)
-                ''responseStream.Close()
-                '_response.Close()
-                'FIN PRUEBA RICARDO
-#End Region
-#Region "Descomentar, funcionaba OK, no era por esto"
-                'INICIO DESCOMENTAR
-                'Dim bytes() As Byte = myrequest.DownloadData(myAddress & LTrim(RTrim(numfact)) & ".pdf")
-                '  Crear FileStream para leer el archivo
-                'Dim DownloadStream As FileStream = System.IO.File.Create(HttpContext.Current.Server.MapPath("~/_tmp/") & LTrim(RTrim(numfact)) & ".pdf")
-                '  Stream al archivo
-                'DownloadStream.Write(bytes, 0, bytes.Length)
-                'DownloadStream.Close()
-                'FIN DESCOMENTAR
-#End Region
-#Region "Prueba WebRequest"
-                'Dim objResponse As WebResponse
-                'Dim objRequest As WebRequest
-                'Dim result As String
-                'objRequest = System.Net.HttpWebRequest.Create("http://www.capsunchales.com/PDF/" & LTrim(RTrim(numfact)) & ".pdf")
-                'objRequest.Credentials = New NetworkCredential(System.Configuration.ConfigurationManager.AppSettings("ftpUser").ToString(), System.Configuration.ConfigurationManager.AppSettings("ftpPassWord").ToString())
-                'objResponse = objRequest.GetResponse()
-                'Dim remoteStream As Stream = Nothing
-                'Dim localStream As Stream = Nothing
-                'localStream = File.Create(Server.MapPath("~/_tmp/" & LTrim(RTrim(numfact)) & ".pdf"))
-                'Dim sr As New StreamReader(objResponse.GetResponseStream())
-                'Dim stream As Stream = objResponse.GetResponseStream()
-                'Dim buffer As Byte() = New Byte(1023) {}
-                'Dim bg1 As Int64 = buffer.Length
-                'Dim bytesread As Byte = stream.Read(buffer, 0, bg1)
-                'localStream.Write(buffer, 0, bytesread)
-                ''result = sr.ReadToEnd()
-                ''Dim mst As MemoryStream = sr.ReadToEnd().ToArray
-                ''HttpContext.Current.Response.ClearContent()
-                ''HttpContext.Current.Response.ClearHeaders()
-                ''HttpContext.Current.Response.ContentType = "application/pdf"
-                ''HttpContext.Current.Response.OutputStream.Write(mst.ToArray(), 0, mst.ToArray().Length)
-                ''HttpContext.Current.Response.Flush()
-                ''HttpContext.Current.Response.Close()
-
-                'sr.Close()
-
-                '' Create a request for the URL. 
-                'Dim request As WebRequest = WebRequest.Create("http://www.capsunchales.com/PDF/" & LTrim(RTrim(numfact)) & ".pdf")
-                '' If required by the server, set the credentials.
-                'request.Credentials = New NetworkCredential(System.Configuration.ConfigurationManager.AppSettings("ftpUser").ToString(), System.Configuration.ConfigurationManager.AppSettings("ftpPassWord").ToString())
-                '' Get the response.
-                'Dim response As WebResponse = request.GetResponse()
-                'Dim outFile As String = "c:\google.pdf"
-                '' Get the stream containing content returned by the server.
-                'Dim dataStream As Stream = response.GetResponseStream()
-                '' Open the stream using a StreamReader for easy access.
-                'Dim reader As New StreamReader(dataStream)
-                '' Read the content.
-                'Dim responseFromServer As String = reader.ReadToEnd()
-                '' Display the content.
-                'Console.WriteLine(responseFromServer)
-                '' Clean up the streams and the response.
-                'reader.Close()
-                'response.Close()
-#End Region
-
-                Session("filename") = LTrim(RTrim(numfact)) & ".pdf"
-                Response.Redirect("~/showPdf.aspx")
             Catch ex As Exception
                 Me.lblError.Text = "No se pudo recuperar el documento PDF."
                 Me.divError.Visible = True
@@ -296,83 +234,8 @@ Public Class _Default
 
 #Region "Métodos Privados"
 
-    Private Sub readFacturas(ByVal xmlsocio As String, ByVal conexion As Int32)
-        Try
-            Dim dvFacturas As New DataView(Session("dtSaldo"))
-            Dim dtFacturas As New DataTable
-            Dim dvdtFacturas As New DataTable
-            'Dim importeFactura As Decimal
+#Region "Métodos de Pago Mercado Pago (deben migrarse al servicio wcf)"
 
-            dtFacturas.Columns.Add("Nro_Factura")
-            dtFacturas.Columns.Add("Pto_Venta")
-            dtFacturas.Columns.Add("Letra")
-            dtFacturas.Columns.Add("Periodo")
-            dtFacturas.Columns.Add("Fecha_Emision")
-            dtFacturas.Columns.Add("Fecha_Vto")
-            dtFacturas.Columns.Add("Grupo_Fact")
-            dtFacturas.Columns.Add("Importe")
-            dtFacturas.Columns.Add("Factura")
-            dtFacturas.Columns.Add("Conexion")
-            dtFacturas.Columns.Add("Pagada")
-            dtFacturas.Columns.Add("IdPreferenciaPago")
-            dtFacturas.Columns.Add("Socio")
-
-            If conexion = 0 Then 'TODAS
-                'dvFacturas.RowFilter = "Socio =" & xmlsocio
-                dvFacturas.Sort = "PERIODO DESC"
-                dvdtFacturas = dvFacturas.ToTable
-                For u = 0 To dvdtFacturas.Rows.Count - 1
-                    dtFacturas.Rows.Add()
-                    dtFacturas.Rows(u).Item("Nro_Factura") = Mid(dvdtFacturas.Rows(u).Item("Factura"), 11, (Len(dvdtFacturas.Rows(u).Item("Factura")) - 10))
-                    dtFacturas.Rows(u).Item("Pto_Venta") = dvdtFacturas.Rows(u).Item("Pto_Venta")
-                    dtFacturas.Rows(u).Item("Letra") = dvdtFacturas.Rows(u).Item("Socio") & "/" & dvdtFacturas.Rows(u).Item("Conexion")  'dvdtFacturas.Rows(u).Item("Letra")
-                    dtFacturas.Rows(u).Item("Periodo") = dvdtFacturas.Rows(u).Item("Periodo")
-                    dtFacturas.Rows(u).Item("Fecha_Emision") = dvdtFacturas.Rows(u).Item("Fecha_Emision")
-                    dtFacturas.Rows(u).Item("Fecha_Vto") = dvdtFacturas.Rows(u).Item("Fecha_Vto")
-                    dtFacturas.Rows(u).Item("Grupo_Fact") = dvdtFacturas.Rows(u).Item("Grupo_Fact")
-                    dtFacturas.Rows(u).Item("Importe") = dvdtFacturas.Rows(u).Item("Importe")
-                    dtFacturas.Rows(u).Item("Factura") = dvdtFacturas.Rows(u).Item("Factura")
-                    dtFacturas.Rows(u).Item("Conexion") = dvdtFacturas.Rows(u).Item("Conexion")
-                    dtFacturas.Rows(u).Item("Pagada") = dvdtFacturas.Rows(u).Item("Pagada")
-                    dtFacturas.Rows(u).Item("Socio") = dvdtFacturas.Rows(u).Item("Socio")
-                    'TODO: Para la fila 10, si la factura está en la tabla nueva a crear "Pagos", mostrar "Pago en proceso" y quizás darle un color.
-                    sumtotal = sumtotal + Convert.ToDouble(dvdtFacturas.Rows(u).Item("Importe"))
-                Next
-                'Me.txtDeudatotal.Text = Format((sumtotal), "0.00")
-
-            Else
-                dvFacturas.RowFilter = "Socio =" & xmlsocio & " AND Conexion =" & conexion
-                'dvFacturas.RowFilter = "Conexion =" & conexion
-                dvFacturas.Sort = "periodo DESC"
-                dvdtFacturas = dvFacturas.ToTable
-                For u = 0 To dvdtFacturas.Rows.Count - 1
-                    dtFacturas.Rows.Add()
-                    dtFacturas.Rows(u).Item("Nro_Factura") = Mid(dvdtFacturas.Rows(u).Item("Factura"), 11, (Len(dvdtFacturas.Rows(u).Item("Factura")) - 10))
-                    dtFacturas.Rows(u).Item("Pto_Venta") = dvdtFacturas.Rows(u).Item("Pto_Venta")
-                    dtFacturas.Rows(u).Item("Letra") = dvdtFacturas.Rows(u).Item("Socio") & "/" & dvdtFacturas.Rows(u).Item("Conexion") 'dvdtFacturas.Rows(u).Item("Letra")
-                    dtFacturas.Rows(u).Item("Periodo") = dvdtFacturas.Rows(u).Item("Periodo")
-                    dtFacturas.Rows(u).Item("Fecha_Emision") = dvdtFacturas.Rows(u).Item("Fecha_Emision")
-                    dtFacturas.Rows(u).Item("Fecha_Vto") = dvdtFacturas.Rows(u).Item("Fecha_Vto")
-                    dtFacturas.Rows(u).Item("Grupo_Fact") = dvdtFacturas.Rows(u).Item("Grupo_Fact")
-                    dtFacturas.Rows(u).Item("Importe") = dvdtFacturas.Rows(u).Item("Importe")
-                    dtFacturas.Rows(u).Item("Factura") = dvdtFacturas.Rows(u).Item("Factura")
-                    dtFacturas.Rows(u).Item("Conexion") = dvdtFacturas.Rows(u).Item("Conexion")
-                    dtFacturas.Rows(u).Item("Pagada") = dvdtFacturas.Rows(u).Item("Pagada")
-                    dtFacturas.Rows(u).Item("Socio") = dvdtFacturas.Rows(u).Item("Socio")
-                    'TODO: Para la fila 10, si la factura está en la tabla nueva a crear "Pagos", mostrar "Pago en proceso" y quizás darle un color.
-                    sumtotal = sumtotal + Convert.ToDouble(dvdtFacturas.Rows(u).Item("Importe"))
-                Next
-
-
-            End If
-
-            Me.GridView1.DataSource = ""
-            Me.GridView1.DataSource = dtFacturas
-            Me.GridView1.DataBind()
-        Catch ex As Exception
-
-        End Try
-    End Sub
     Private Sub ReEvaluarYSetearMercadoPagoToken()
         If (MercadoPago.SDK.AccessToken Is Nothing) Then
             MercadoPago.SDK.SetAccessToken("TEST-803559796931547-060612-07b906157e8808e7d657beabf35fdc1d-229476782")
@@ -402,14 +265,14 @@ Public Class _Default
         Dim importeFactura As Decimal
 
         If cell Is Nothing Or cell Is DBNull.Value Then
-            Session("txtError") = "Se produjo un error. Los montos de las facturas no tienen el formato correcto."
+            login.CreateCookie("txtError", "Se produjo un error. Los montos de las facturas no tienen el formato correcto.")
             Response.Redirect("~/Error.aspx")
         Else
             If (Decimal.TryParse(cell,
             NumberStyles.AllowDecimalPoint,
             CultureInfo.CreateSpecificCulture("fr-FR"),
             importeFactura) = False) Then
-                Session("txtError") = "Se produjo un error. Los montos de las facturas no tienen el formato correcto."
+                login.CreateCookie("txtError", "Se produjo un error. Los montos de las facturas no tienen el formato correcto.")
                 Response.Redirect("~/Error.aspx")
             End If
         End If
@@ -418,12 +281,122 @@ Public Class _Default
         Return importeFactura
     End Function
 
+    ''' <summary>
+    ''' Verificars the pago en proceso.
+    ''' </summary>
+    ''' <param name="idSocio">The identifier socio.</param>
+    ''' <param name="idConexion">The identifier conexion.</param>
+    ''' <param name="numFact">The number fact.</param>
+    ''' <param name="importe">The importe.</param>
+    ''' <returns></returns>
     Private Function VerificarPagoEnProceso(ByVal idSocio As Int32, ByVal idConexion As Int32, ByVal numFact As String, ByVal importe As Decimal) As Boolean
         Dim myContext As New TrylogycContext
         Dim existePago As Boolean = myContext.GetPago(idSocio, idConexion, numFact, importe)
         Return existePago
     End Function
 
+#End Region
+
+    Private Sub readFacturas(ByVal xmlsocio As String, ByVal conexion As Int32)
+        Try
+            'Recuperar lista de saldos de la api
+            '1.Setear endpoint
+            Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "GetUserBalances")
+            '2.Crear clase Request.
+            Dim userBalancesRequest As New UserAssociatesAndBalancesRequest()
+            userBalancesRequest.UserId = Convert.ToInt32(Request.Cookies("IDUsuario").Value)
+
+            Dim serializedRequest As String = JsonConvert.SerializeObject(userBalancesRequest)
+
+            '3.Invocar Servicio
+            Dim responseMessage As HttpResponseMessage = Task.Run(Function()
+                                                                      Return APIHelpers.PostAsync(apiEndpoint, serializedRequest, 60, Nothing)
+                                                                  End Function).Result
+            '4. Deserializar respuesta
+            Dim userBalancesResponse As UserBalancesResponse = JsonConvert.DeserializeObject(Of UserBalancesResponse)(responseMessage.Content.ReadAsStringAsync().Result)
+
+            If userBalancesResponse.StatusCode = HttpStatusCode.OK Then
+                Dim dvFacturas As New DataView(login.CreateDataTableBalances(userBalancesResponse.Balances.ToArray()))
+                Dim dtFacturas As New DataTable
+                Dim dvdtFacturas As New DataTable
+                'Dim importeFactura As Decimal
+
+                dtFacturas.Columns.Add("Nro_Factura")
+                dtFacturas.Columns.Add("Pto_Venta")
+                dtFacturas.Columns.Add("Letra")
+                dtFacturas.Columns.Add("Periodo")
+                dtFacturas.Columns.Add("Fecha_Emision")
+                dtFacturas.Columns.Add("Fecha_Vto")
+                dtFacturas.Columns.Add("Grupo_Fact")
+                dtFacturas.Columns.Add("Importe")
+                dtFacturas.Columns.Add("Factura")
+                dtFacturas.Columns.Add("Conexion")
+                dtFacturas.Columns.Add("Pagada")
+                dtFacturas.Columns.Add("IdPreferenciaPago")
+                dtFacturas.Columns.Add("Socio")
+
+                If conexion = 0 Then 'TODAS
+                    'dvFacturas.RowFilter = "Socio =" & xmlsocio
+                    dvFacturas.Sort = "PERIODO DESC"
+                    dvdtFacturas = dvFacturas.ToTable
+                    For u = 0 To dvdtFacturas.Rows.Count - 1
+                        dtFacturas.Rows.Add()
+                        dtFacturas.Rows(u).Item("Nro_Factura") = Mid(dvdtFacturas.Rows(u).Item("Factura"), 11, (Len(dvdtFacturas.Rows(u).Item("Factura")) - 10))
+                        dtFacturas.Rows(u).Item("Pto_Venta") = dvdtFacturas.Rows(u).Item("Pto_Venta")
+                        dtFacturas.Rows(u).Item("Letra") = dvdtFacturas.Rows(u).Item("Socio") & "/" & dvdtFacturas.Rows(u).Item("Conexion")  'dvdtFacturas.Rows(u).Item("Letra")
+                        dtFacturas.Rows(u).Item("Periodo") = dvdtFacturas.Rows(u).Item("Periodo")
+                        dtFacturas.Rows(u).Item("Fecha_Emision") = dvdtFacturas.Rows(u).Item("Fecha_Emision")
+                        dtFacturas.Rows(u).Item("Fecha_Vto") = dvdtFacturas.Rows(u).Item("Fecha_Vto")
+                        dtFacturas.Rows(u).Item("Grupo_Fact") = dvdtFacturas.Rows(u).Item("Grupo_Fact")
+                        dtFacturas.Rows(u).Item("Importe") = dvdtFacturas.Rows(u).Item("Importe")
+                        dtFacturas.Rows(u).Item("Factura") = dvdtFacturas.Rows(u).Item("Factura")
+                        dtFacturas.Rows(u).Item("Conexion") = dvdtFacturas.Rows(u).Item("Conexion")
+                        dtFacturas.Rows(u).Item("Pagada") = dvdtFacturas.Rows(u).Item("Pagada")
+                        dtFacturas.Rows(u).Item("Socio") = dvdtFacturas.Rows(u).Item("Socio")
+                        'TODO: Para la fila 10, si la factura está en la tabla nueva a crear "Pagos", mostrar "Pago en proceso" y quizás darle un color.
+                        sumtotal = sumtotal + Convert.ToDouble(dvdtFacturas.Rows(u).Item("Importe"))
+                    Next
+                    'Me.txtDeudatotal.Text = Format((sumtotal), "0.00")
+
+                Else
+                    dvFacturas.RowFilter = "Socio =" & xmlsocio & " AND Conexion =" & conexion
+                    'dvFacturas.RowFilter = "Conexion =" & conexion
+                    dvFacturas.Sort = "periodo DESC"
+                    dvdtFacturas = dvFacturas.ToTable
+                    For u = 0 To dvdtFacturas.Rows.Count - 1
+                        dtFacturas.Rows.Add()
+                        dtFacturas.Rows(u).Item("Nro_Factura") = Mid(dvdtFacturas.Rows(u).Item("Factura"), 11, (Len(dvdtFacturas.Rows(u).Item("Factura")) - 10))
+                        dtFacturas.Rows(u).Item("Pto_Venta") = dvdtFacturas.Rows(u).Item("Pto_Venta")
+                        dtFacturas.Rows(u).Item("Letra") = dvdtFacturas.Rows(u).Item("Socio") & "/" & dvdtFacturas.Rows(u).Item("Conexion") 'dvdtFacturas.Rows(u).Item("Letra")
+                        dtFacturas.Rows(u).Item("Periodo") = dvdtFacturas.Rows(u).Item("Periodo")
+                        dtFacturas.Rows(u).Item("Fecha_Emision") = dvdtFacturas.Rows(u).Item("Fecha_Emision")
+                        dtFacturas.Rows(u).Item("Fecha_Vto") = dvdtFacturas.Rows(u).Item("Fecha_Vto")
+                        dtFacturas.Rows(u).Item("Grupo_Fact") = dvdtFacturas.Rows(u).Item("Grupo_Fact")
+                        dtFacturas.Rows(u).Item("Importe") = dvdtFacturas.Rows(u).Item("Importe")
+                        dtFacturas.Rows(u).Item("Factura") = dvdtFacturas.Rows(u).Item("Factura")
+                        dtFacturas.Rows(u).Item("Conexion") = dvdtFacturas.Rows(u).Item("Conexion")
+                        dtFacturas.Rows(u).Item("Pagada") = dvdtFacturas.Rows(u).Item("Pagada")
+                        dtFacturas.Rows(u).Item("Socio") = dvdtFacturas.Rows(u).Item("Socio")
+                        'TODO: Para la fila 10, si la factura está en la tabla nueva a crear "Pagos", mostrar "Pago en proceso" y quizás darle un color.
+                        sumtotal = sumtotal + Convert.ToDouble(dvdtFacturas.Rows(u).Item("Importe"))
+                    Next
+
+
+                End If
+
+                Me.GridView1.DataSource = ""
+                Me.GridView1.DataSource = dtFacturas
+                Me.GridView1.DataBind()
+            Else
+                login.CreateCookie("txtError", userBalancesResponse?.Message)
+                Response.Redirect("~/Error.aspx")
+            End If
+
+        Catch ex As Exception
+            login.CreateCookie("txtError", "Ocurrieron errores durante la recuperación de sus facturas.")
+            Response.Redirect("~/Error.aspx")
+        End Try
+    End Sub
     Private Sub CargarComboConexiones(ByVal dtSocio As DataTable)
 
         For r = 0 To dtSocio.Rows.Count - 1
@@ -443,15 +416,13 @@ Public Class _Default
         Next r
         lstConexiones.SelectedValue = 0
     End Sub
-
     Private Sub RefreshMasterData()
         Me.Master.Usuario = New Models.Usuario()
-        Me.Master.Usuario.IDUsuario = Me.Context.Items("IDUsuario").ToString()
-        Me.Master.Usuario.XmlSocio = Me.Context.Items("xmlSocio").ToString()
-        Me.Master.Usuario.email = Me.Context.Items("userEmail").ToString()
-        Me.Master.Usuario.username = Me.Context.Items("nomUsuario").ToString()
-        Me.Master.Usuario.passWord = Me.Context.Items("Password").ToString()
-        Me.Master.Usuario.foto = Me.Context.Items("Foto").ToString()
+        Me.Master.Usuario.IDUsuario = Convert.ToInt32(Request.Cookies("IDUsuario").Value)
+        Me.Master.Usuario.XmlSocio = Convert.ToInt32(Request.Cookies("xmlSocio").Value)
+        Me.Master.Usuario.email = Request.Cookies("userEmail")?.Value?.ToString()
+        Me.Master.Usuario.username = Request.Cookies("nomUsuario")?.Value?.ToString()
+        Me.Master.Usuario.foto = Request.Cookies("Foto")?.Value?.ToString()
         Dim lblcliente As Label = CType(Page.Master.FindControl("lblcliente"), Label)
         lblcliente.Text = Me.Master.Usuario.username
 
@@ -462,7 +433,7 @@ Public Class _Default
         lblcliente2.Text = Me.Master.Usuario.username
 
         Dim lblco1 As Label = CType(Page.Master.FindControl("lblco1"), Label)
-        lblco1.Text = Me.Context.Items("ConCount")
+        lblco1.Text = Request.Cookies("conCount")?.Value?.ToString()
 
         Dim lblco1txt As Label = CType(Page.Master.FindControl("lblco1txt"), Label)
         lblco1txt.Text = "Conexiones"

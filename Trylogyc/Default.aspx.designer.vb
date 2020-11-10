@@ -95,6 +95,15 @@ Partial Public Class _Default
     Protected WithEvents LinqDataSource1 As Global.System.Web.UI.WebControls.LinqDataSource
 
     '''<summary>
+    '''hidden_dtSocios control.
+    '''</summary>
+    '''<remarks>
+    '''Auto-generated field.
+    '''To modify move field declaration from designer file to code-behind file.
+    '''</remarks>
+    Protected WithEvents hidden_dtSocios As Global.System.Web.UI.WebControls.HiddenField
+
+    '''<summary>
     '''Master property.
     '''</summary>
     '''<remarks>

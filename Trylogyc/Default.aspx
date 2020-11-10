@@ -86,7 +86,7 @@
                                 <asp:TemplateField HeaderText="Pagar" ItemStyle-HorizontalAlign="Center">
                                     <ItemTemplate>
                                         <asp:Button ID="btnPagar" CommandName="btnPagar" runat="server" Text="Pagar" CssClass="btn btn-sm btn-primary" CommandArgument='<%# DataBinder.Eval(Container, "RowIndex") %>'
-                                            Visible='<%# If(Eval("Pagada").ToString() = "0", True, False) %>' />
+                                            Visible='<%# If(Eval("Pagada").ToString() = False, True, False) %>' />
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:BoundField HeaderText="Factura" DataField="Nro_Factura" />
@@ -138,4 +138,5 @@
 
     <asp:LinqDataSource ID="LinqDataSource1" runat="server">
     </asp:LinqDataSource>
+    <asp:HiddenField ID="hidden_dtSocios" runat="server" />
 </asp:Content>

@@ -53,7 +53,9 @@ Public Class Pagar
             'Crear Pago
             Dim idPlataforma As Int32 = CrearRegistroPagoEnCurso(nroFactura, importeFactura, idSocio, idConexion)
             If idPlataforma <= 0 Then
-                Session("txtError") = "Se produjo un error durante el proceso de pago y su pago no pudo ser realizado."
+                Response.Cookies.Remove("txtError")
+                Response.Cookies.Remove("codError")
+                login.CreateCookie("txtError", "Se produjo un error durante el proceso de pago y su pago no pudo ser realizado.")
                 Try
                     Response.Redirect("~/Error.aspx")
                 Catch ex As Exception
@@ -65,7 +67,7 @@ Public Class Pagar
             'Actualizar Pago con IdPreferencia
             Dim pagoActualizado As Boolean = ActualizarPagoPreferencia(idPlataforma, preferencia)
             If pagoActualizado = False Then
-                Session("txtError") = "Se produjo un error durante el proceso de pago y su pago no pudo ser realizado."
+                login.CreateCookie("txtError", "Se produjo un error durante el proceso de pago y su pago no pudo ser realizado.")
                 Try
                     Response.Redirect("~/Error.aspx")
                 Catch ex As Exception
@@ -74,7 +76,7 @@ Public Class Pagar
             End If
 
         Catch ex As Exception
-            If String.IsNullOrEmpty(Session("txtError")) = True Then
+            If Response.Cookies("txtError") Is Nothing Then
                 Response.Redirect("~/Default.aspx")
             Else
                 Response.Redirect("~/Error.aspx")
@@ -126,9 +128,8 @@ Public Class Pagar
 
     Private Function RegistrarDatosClienteMercadoPago() As Payer
         Dim payer As New Payer()
-        payer.Email = Session("userEmail").ToString()
-        'payer.Identification = Session("xmlSocio")
-        payer.Name = Session("nomUsuario")
+        payer.Email = Request.Cookies("userEmail")?.Value?.ToString()
+        payer.Name = Request.Cookies("nomUsuario")?.Value?.ToString()
         Return payer
     End Function
 
