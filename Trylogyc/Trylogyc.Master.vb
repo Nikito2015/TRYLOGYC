@@ -12,20 +12,26 @@ Public Class Trylogyc
             Dim context = New TrylogycContext
             Dim dsUsuario As New DataSet
             Dim dsCops As New DataSet
-            dsUsuario = context.GetUsuario(Session("IDUsuario"))
-            dsCops = context.GetCops(Session("IDUsuario"))
-            Dim miUsuario = New Usuario
-            miUsuario.IDUsuario = dsUsuario.Tables(0).Rows(0).Item(0)
-            miUsuario.XmlSocio = dsUsuario.Tables(0).Rows(0).Item(1)
-            miUsuario.email = dsUsuario.Tables(0).Rows(0).Item(2)
-            miUsuario.username = dsUsuario.Tables(0).Rows(0).Item(3)
-            miUsuario.passWord = dsUsuario.Tables(0).Rows(0).Item(4)
-            miUsuario.foto = dsUsuario.Tables(0).Rows(0).Item(5)
-            Me.lblcliente.Text = miUsuario.username
-            Me.fotocliente2.ImageUrl = miUsuario.foto
-            Me.lblcliente2.Text = miUsuario.username
+            If Session("IDUsuario") Is Nothing Then
+                Session("IDUsuario") = Request.Cookies("IDUsuario")?.Value
+            End If
+            If Not Session("IDUSuario") Is Nothing Then
+                dsUsuario = context.GetUsuario(Session("IDUsuario"))
+                dsCops = context.GetCops(Session("IDUsuario"))
+                Dim miUsuario = New Usuario
+                miUsuario.IDUsuario = dsUsuario.Tables(0).Rows(0).Item(0)
+                miUsuario.XmlSocio = dsUsuario.Tables(0).Rows(0).Item(1)
+                miUsuario.email = dsUsuario.Tables(0).Rows(0).Item(2)
+                miUsuario.username = dsUsuario.Tables(0).Rows(0).Item(3)
+                miUsuario.passWord = dsUsuario.Tables(0).Rows(0).Item(4)
+                miUsuario.foto = dsUsuario.Tables(0).Rows(0).Item(5)
+                Me.lblcliente.Text = miUsuario.username
+                Me.fotocliente2.ImageUrl = miUsuario.foto
+                Me.lblcliente2.Text = miUsuario.username
 
-            Me.lblco1.Text = Session("conCount")
+                Me.lblco1.Text = Session("conCount")
+            End If
+
             Me.lblco1txt.Text = "Conexiones"
 
         Else

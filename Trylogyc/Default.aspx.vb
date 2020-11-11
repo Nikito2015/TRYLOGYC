@@ -27,16 +27,16 @@ Public Class _Default
             Me.divError.Visible = False
             If Not Page.IsPostBack Then
                 If Session("IDUsuario") Is Nothing Then
-                    Session("IDUsuario") = Request.Params("IDUsuario")
+                    Session("IDUsuario") = Request.Cookies("IDUsuario").Value
                     If Session("IDUsuario") Is Nothing Then
-                        Session("IDUsuario") = Request.Cookies("IDUsuario")
+                        Session("IDUsuario") = Request.Params("IDUsuario")
                     End If
                 End If
 
                 If Session("xmlSocio") Is Nothing Then
-                    Session("xmlSocio") = Request.Params("xmlSocio")
+                    Session("xmlSocio") = Request.Cookies("xmlSocio").Value
                     If Session("xmlSocio") Is Nothing Then
-                        Session("xmlSocio") = Request.Cookies("xmlSocio")
+                        Session("xmlSocio") = Request.Params("xmlSocio")
                     End If
                 End If
                 Dim filtroConexiones As String = Request.Cookies("filtroConexiones").Value
@@ -282,7 +282,13 @@ Public Class _Default
                 'response.Close()
 #End Region
 
-                Session("filename") = LTrim(RTrim(numfact)) & ".pdf"
+                Response.Cookies.Remove("fileName")
+                Dim pdfCookie As HttpCookie
+                pdfCookie = New HttpCookie("filename")
+                pdfCookie.Value = LTrim(RTrim(numfact)) & ".pdf"
+                pdfCookie.Expires = DateTime.Now.AddMinutes(10)
+                Response.Cookies.Add(pdfCookie)
+
                 Response.Redirect("~/showPdf.aspx")
             Catch ex As Exception
                 Me.lblError.Text = "No se pudo recuperar el documento PDF."

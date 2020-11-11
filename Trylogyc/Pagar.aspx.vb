@@ -20,7 +20,7 @@ Public Class Pagar
         Dim strImport As String = Request.Params("importe")
         Dim idSocio As Int32 = Request.Params("idSocio")
         Dim idConexion As Int32 = Request.Params("idConexion")
-        Dim idUsuario As Int32 = Request.Params("IDUsuario")
+        Dim idUsuario As Int32 = Request.Cookies("IDUsuario").Value
         Session("IDUsuario") = idUsuario
         Session("xmlSocio") = idSocio
         Try

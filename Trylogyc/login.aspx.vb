@@ -107,6 +107,20 @@ Public Class login
                         cookie3.Value = myUser.XmlSocio
                         cookie3.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
                         Response.Cookies.Add(cookie3)
+
+                        Dim cookie4 As HttpCookie
+                        cookie4 = New HttpCookie("aceptaFacturaMail")
+                        cookie4.Value = myUser.EnviarFacturaEmail
+                        cookie4.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+                        Response.Cookies.Add(cookie4)
+
+
+                        Dim cookie5 As HttpCookie
+                        cookie5 = New HttpCookie("username")
+                        cookie5.Value = myUser.username
+                        cookie5.Expires = DateTime.Now.AddMinutes(sessionTimeOut)
+                        Response.Cookies.Add(cookie5)
+
                         Response.Redirect(String.Format("{0}?IDUsuario={1}&xmlSocio={2}&userName={3}", myUser.ruta, myUser.IDUsuario, myUser.XmlSocio, myUser.username))
                         'Response.Redirect(myUser.ruta & "?IDUsuario=" & myUser.IDUsuario & "&xmlSocio=" & myUser.XmlSocio & "&userName=" & myUser.username)
                     Else
