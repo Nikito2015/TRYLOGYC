@@ -124,6 +124,9 @@
     <Reference Include="ObjectDumper, Version=1.0.0.12, Culture=neutral, PublicKeyToken=9e2fabf3af85dba9, processorArchitecture=MSIL">
       <HintPath>..\packages\ObjectDumper.1.0.0.12\lib\net35-Client\ObjectDumper.dll</HintPath>
     </Reference>
+    <Reference Include="PlusPagosSecurityKitNetFramework, Version=2.3.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\PlusPagosSecurityKitNetFramework.2.3.1\lib\net35\PlusPagosSecurityKitNetFramework.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Activities" />
     <Reference Include="System.Configuration.ConfigurationManager, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -190,8 +193,8 @@
       <HintPath>..\packages\Microsoft.AspNet.FriendlyUrls.Core.1.0.2\lib\net45\Microsoft.AspNet.FriendlyUrls.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="TrylogycWebsite.Common, Version=2020.11.10.1, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TrylogycWebsite.Common.2020.11.10.1\lib\netstandard2.0\TrylogycWebsite.Common.dll</HintPath>
+    <Reference Include="TrylogycWebsite.Common, Version=2020.12.22.2, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TrylogycWebsite.Common.2020.12.22.2\lib\netstandard2.0\TrylogycWebsite.Common.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
@@ -242,12 +245,14 @@
     <Content Include="LOG\Log.txt" />
     <Content Include="Pagar.aspx" />
     <Content Include="PagarFactura.aspx" />
+    <Content Include="PagarMacro.aspx" />
     <Content Include="PagoExitoso.aspx" />
     <Content Include="PagoPendiente.aspx" />
     <Content Include="PagoRechazado.aspx" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="My Project\app.manifest" />
+    <None Include="My Project\PublishProfiles\FolderProfile.pubxml" />
     <None Include="Scripts\jquery-3.1.1.intellisense.js" />
     <Content Include="Scripts\jquery-3.1.1.js" />
     <Content Include="Scripts\jquery-3.1.1.min.js" />
@@ -269,7 +274,6 @@
     <Content Include="Content\bootstrap.css.map" />
     <Content Include="Content\bootstrap-theme.min.css.map" />
     <Content Include="Content\bootstrap-theme.css.map" />
-    <None Include="My Project\PublishProfiles\Marcelo.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="login.aspx" />
     <Content Include="login_int.aspx" />
@@ -418,6 +422,13 @@
     </Compile>
     <Compile Include="PagarFactura.aspx.vb">
       <DependentUpon>PagarFactura.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="PagarMacro.aspx.designer.vb">
+      <DependentUpon>PagarMacro.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="PagarMacro.aspx.vb">
+      <DependentUpon>PagarMacro.aspx</DependentUpon>
       <SubType>ASPXCodebehind</SubType>
     </Compile>
     <Compile Include="PagoExitoso.aspx.designer.vb">
@@ -603,13 +614,13 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>49335</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:49335/</IISUrl>
+          <IISUrl>http://localhost:9350/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
           </CustomServerUrl>
           <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
-          <servers defaultServer="SelfHostServer">
+          <servers defaultServer="">
             <server name="SelfHostServer" exePath="" cmdArgs="" url="http://localhost:49335/" workingDir="" />
           </servers>
         </WebProjectProperties>

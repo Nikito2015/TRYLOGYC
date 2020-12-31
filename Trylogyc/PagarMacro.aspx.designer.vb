@@ -11,107 +11,122 @@ Option Strict On
 Option Explicit On
 
 
-Partial Public Class _Default
+Partial Public Class PagarMacro
 
     '''<summary>
-    '''Control lstConexiones.
+    '''Control form.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents lstConexiones As Global.System.Web.UI.WebControls.ListBox
+    Protected WithEvents form As Global.System.Web.UI.HtmlControls.HtmlForm
 
     '''<summary>
-    '''Control txtNombre.
+    '''Control urlEnvio.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents txtNombre As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents urlEnvio As Global.System.Web.UI.WebControls.HiddenField
 
     '''<summary>
-    '''Control txtDireccion.
+    '''Control defaultUrl.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents txtDireccion As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents defaultUrl As Global.System.Web.UI.WebControls.HiddenField
 
     '''<summary>
-    '''Control txtLocalidad.
+    '''Control CallbackSuccess.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents txtLocalidad As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents CallbackSuccess As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control divError.
+    '''Control CallbackCancel.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents divError As Global.System.Web.UI.HtmlControls.HtmlGenericControl
+    Protected WithEvents CallbackCancel As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control lblError.
+    '''Control CallbackPending.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents lblError As Global.System.Web.UI.WebControls.Label
+    Protected WithEvents CallbackPending As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control GridView1.
+    '''Control Comercio.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents GridView1 As Global.System.Web.UI.WebControls.GridView
+    Protected WithEvents Comercio As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control sqlFacturas.
+    '''Control SucursalComercio.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents sqlFacturas As Global.System.Web.UI.WebControls.SqlDataSource
+    Protected WithEvents SucursalComercio As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control LinqDataSource1.
+    '''Control Hash.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents LinqDataSource1 As Global.System.Web.UI.WebControls.LinqDataSource
+    Protected WithEvents Hash As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Control hidden_dtSocios.
+    '''Control TransaccionComercioID.
     '''</summary>
     '''<remarks>
     '''Campo generado automáticamente.
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Protected WithEvents hidden_dtSocios As Global.System.Web.UI.WebControls.HiddenField
+    Protected WithEvents TransaccionComercioID As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 
     '''<summary>
-    '''Propiedad Master.
+    '''Control Monto.
     '''</summary>
     '''<remarks>
-    '''Propiedad generada automáticamente.
+    '''Campo generado automáticamente.
+    '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
-    Public Shadows ReadOnly Property Master() As Trylogyc
-        Get
-            Return CType(MyBase.Master, Trylogyc)
-        End Get
-    End Property
+    Protected WithEvents Monto As Global.System.Web.UI.HtmlControls.HtmlInputHidden
+
+    '''<summary>
+    '''Control Producto.
+    '''</summary>
+    '''<remarks>
+    '''Campo generado automáticamente.
+    '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
+    '''</remarks>
+    Protected WithEvents Producto As Global.System.Web.UI.HtmlControls.HtmlInputHidden
+
+    '''<summary>
+    '''Control Importe.
+    '''</summary>
+    '''<remarks>
+    '''Campo generado automáticamente.
+    '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
+    '''</remarks>
+    Protected WithEvents Importe As Global.System.Web.UI.HtmlControls.HtmlInputHidden
 End Class

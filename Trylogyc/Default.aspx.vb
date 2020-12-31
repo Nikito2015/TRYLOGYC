@@ -121,6 +121,7 @@ Public Class _Default
             e.Row.Cells(10).Visible = False
             e.Row.Cells(11).Visible = False
             e.Row.Cells(13).Visible = False
+
         End If
 
         If e.Row.RowType = DataControlRowType.Header Then
@@ -150,6 +151,22 @@ Public Class _Default
             'Crear 1 preferencia de pago por fila:
 
         End If
+
+        'Ocultar/Mostrar botón Macro Click
+        If e.Row.RowType = DataControlRowType.DataRow Then
+            Dim botonMacroClick As Boolean = Convert.ToBoolean(ConfigurationManager.AppSettings("botonMacroClick"))
+            Dim botonMercadoPago As Boolean = Convert.ToBoolean(ConfigurationManager.AppSettings("botonMercadoPago"))
+
+            If botonMacroClick = False Then
+                Dim botonPagoMacro As Button = CType(e.Row.FindControl("btnPagarMacro"), Button)
+                botonPagoMacro.Style.Add("display", "none")
+            End If
+            If botonMercadoPago = False Then
+                Dim botonMPago As Button = CType(e.Row.FindControl("btnPagar"), Button)
+                botonMPago.Style.Add("display", "none")
+            End If
+        End If
+
     End Sub
     Protected Sub gridview1_rowcommand(sender As Object, e As CommandEventArgs) Handles GridView1.RowCommand
         If (e.CommandName = "cmdPDF2") Then
@@ -206,21 +223,27 @@ Public Class _Default
                 Me.divError.Visible = True
             End Try
         Else
-            If (e.CommandName.Equals("btnPagar")) Then
-                Dim index1 As Integer = Convert.ToInt32(e.CommandArgument) 'captura el valor del índice de la fila
-                Dim row1 As GridViewRow = GridView1.Rows(index1) 'crea un objeto row que contiene la fila del botón presionado.
-                Dim socio As Int32 = Convert.ToInt32(CType(row1.Cells(13), DataControlFieldCell).Text)
-                Dim numfact As String = CType(row1.Cells(2), DataControlFieldCell).Text
-                Dim importe As String = CType(row1.Cells(9), DataControlFieldCell).Text
-                importeFactura = ConvertirCampoImporteADecimal(importe)
-                Dim Master As Trylogyc = CType(Me.Master, Trylogyc)
-                Dim idSocio As String = socio
-                Dim idConexion As String = CType(row1.Cells(10), DataControlFieldCell).Text
-                Dim pagoEnProceso As Boolean = VerificarPagoEnProceso(idSocio, idConexion, numfact, importeFactura)
+            Dim index1 As Integer = Convert.ToInt32(e.CommandArgument) 'captura el valor del índice de la fila
+            Dim row1 As GridViewRow = GridView1.Rows(index1) 'crea un objeto row que contiene la fila del botón presionado.
+            Dim socio As Int32 = Convert.ToInt32(CType(row1.Cells(13), DataControlFieldCell).Text)
+            Dim numfact As String = CType(row1.Cells(2), DataControlFieldCell).Text
+            Dim importe As String = CType(row1.Cells(9), DataControlFieldCell).Text
+            importeFactura = ConvertirCampoImporteADecimal(importe)
+            Dim Master As Trylogyc = CType(Me.Master, Trylogyc)
+            Dim idSocio As String = socio
+            Dim idConexion As String = CType(row1.Cells(10), DataControlFieldCell).Text
+            Dim pagoEnProceso As Boolean = VerificarPagoEnProceso(idSocio, idConexion, numfact, importeFactura)
+            If (e.CommandName.Equals("btnPagarMP")) Then
                 If pagoEnProceso = True Then
                     Response.Redirect("~/ConfirmarPago.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
                 Else
                     Response.Redirect("~/Pagar.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
+                End If
+            ElseIf (e.CommandName.Equals("btnPagarMacro")) Then
+                If pagoEnProceso = True Then
+                    Response.Redirect("~/ConfirmarPago.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
+                Else
+                    Response.Redirect("~/PagarMacro.aspx?numfact=" & LTrim(RTrim(numfact)) & "&importe=" & importe & "&idSocio=" & idSocio & "&idConexion=" & idConexion)
                 End If
             End If
         End If

@@ -84,9 +84,11 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Pagar" ItemStyle-HorizontalAlign="Center">
-                                    <ItemTemplate>
-                                        <asp:Button ID="btnPagar" CommandName="btnPagar" runat="server" Text="Pagar" CssClass="btn btn-sm btn-primary" CommandArgument='<%# DataBinder.Eval(Container, "RowIndex") %>'
-                                            Visible='<%# If(Eval("Pagada").ToString() = False, True, False) %>' />
+                                    <ItemTemplate>                                        
+                                        <asp:Button ID="btnPagar" CommandName="btnPagarMP" runat="server" Text="Mercado Pago" CssClass="btn btn-primary btn-xs" style="margin: 2px" CommandArgument='<%# DataBinder.Eval(Container, "RowIndex") %>'
+                                            Visible='<%# If(Eval("Pagada").ToString() = False, True, False) %>' />                                        
+                                        <asp:Button ID="btnPagarMacro" CommandName="btnPagarMacro" runat="server" Text="Macro" CssClass="btn btn-primary btn-xs" style="margin: 2px" CommandArgument='<%# DataBinder.Eval(Container, "RowIndex") %>'
+                                            Visible='<%# If(Eval("Pagada").ToString() = False, True, False) %>' />                                        
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:BoundField HeaderText="Factura" DataField="Nro_Factura" />
