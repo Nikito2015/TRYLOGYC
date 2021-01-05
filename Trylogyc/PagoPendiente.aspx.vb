@@ -15,14 +15,14 @@ Public Class PagoPendiente
     Inherits System.Web.UI.Page
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not Page.IsPostBack Then
-            If (Request.Params("preferenceMacro") <> "") Then
-                Dim preference As String = Request.Params("preferenceMacro")
+            If (Request.Params("idPago") <> "") Then
+                Dim idPago As Int32 = Request.Params("idPago")
                 Dim TransaccionComercioId As String = Request.Params("TransaccionComercioID")
 
-                Dim pagoRegistrado As Boolean = ActualizarEstadoPago(preference, "", EstadosPagos.Demorado)
+                Dim pagoRegistrado As Boolean = ActualizarEstadoPago(idPago, "", EstadosPagos.Demorado)
                 IdComprobante.Text = TransaccionComercioId
             Else
-                    Dim collection As String = Request.Params("collection_id")
+                Dim collection As String = Request.Params("collection_id")
                 Dim merchantOrder As String = Request.Params("merchant_order_id")
                 Dim preference As String = Request.Params("preference_id")
                 Dim myContext As New TrylogycContext
@@ -31,14 +31,14 @@ Public Class PagoPendiente
             End If
         End If
     End Sub
-    Private Function ActualizarEstadoPago(ByVal preference As String, ByVal transaccionPlataformaId As String, ByVal estadoPago As Int32) As Boolean
+    Private Function ActualizarEstadoPago(ByVal idPago As Int32, ByVal transaccionPlataformaId As String, ByVal estadoPago As Int32) As Boolean
 
         '1.Setear Endpoint
         Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "UpdateStatusPayment")
         '2.Crear clase Request
         Dim Request As New UpdateStatusPaymentRequest()
 
-        Request.preference = preference
+        Request.idPago = idPago
         Request.transaccionPlataformaId = transaccionPlataformaId
         Request.estadoPago = estadoPago
 

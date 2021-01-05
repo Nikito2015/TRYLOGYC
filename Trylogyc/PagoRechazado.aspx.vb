@@ -18,10 +18,10 @@ Public Class PagoRechazado
     Public IdComprobante As String
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not Page.IsPostBack Then
-            If (Request.Params("preferenceMacro") <> "") Then
-                Dim preference As String = Request.Params("preferenceMacro")
+            If (Request.Params("idPago") <> "") Then
+                Dim idPago As Int32 = Request.Params("idPago")
                 'Dim TransaccionPlataformaId As String = Request.Form("TransaccionPlataformaId")
-                Dim pagoRegistrado As Boolean = ActualizarEstadoPago(preference, "", EstadosPagos.Rechazado)
+                Dim pagoRegistrado As Boolean = ActualizarEstadoPago(idPago, "", EstadosPagos.Rechazado)
             Else
                 Dim collection As String = Request.Params("collection_id")
                 Dim merchantOrder As String = Request.Params("merchant_order_id")
@@ -31,14 +31,14 @@ Public Class PagoRechazado
             End If
         End If
     End Sub
-    Private Function ActualizarEstadoPago(ByVal preference As String, ByVal transaccionPlataformaId As String, ByVal estadoPago As Int32) As Boolean
+    Private Function ActualizarEstadoPago(ByVal idPago As Int32, ByVal transaccionPlataformaId As String, ByVal estadoPago As Int32) As Boolean
 
         '1.Setear Endpoint
         Dim apiEndpoint As String = String.Format("{0}/{1}", ConfigurationManager.AppSettings("WebsiteAPIEndpoint").ToString(), "UpdateStatusPayment")
         '2.Crear clase Request
         Dim Request As New UpdateStatusPaymentRequest()
 
-        Request.preference = preference
+        Request.idPago = idPago
         Request.transaccionPlataformaId = transaccionPlataformaId
         Request.estadoPago = estadoPago
 

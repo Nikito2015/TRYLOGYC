@@ -161,7 +161,7 @@ Public Class PagarMacro
 
     End Function
 
-    Private Function GenerarPreferenciaPagoMacro(nroFactura As String, importeFactura As Decimal, ByVal idPago As String) As DatosMacro
+    Private Function GenerarPreferenciaPagoMacro(nroFactura As String, importeFactura As Decimal, idPago As Int32) As DatosMacro
 
         Dim DatosMacro As New DatosMacro
         Dim secretkey As String
@@ -188,7 +188,7 @@ Public Class PagarMacro
         Importe.Value = Convert.ToString(importeFactura).Replace(",", "")
 
         'asignamos un valor único por cada transacción para enviar en el campo TransaccionComercioID
-        TransaccionComercioID.Value = idPago + nroFactura '+ Convert.ToString(Random.Next(1, 1000))
+        TransaccionComercioID.Value = Convert.ToString(idPago) + nroFactura '+ Convert.ToString(Random.Next(1, 1000))
 
         'generamos el hash
         Hash.Value = SHA256Hash.Generate(ip, secretkey, Comercio.Value, String.Empty, Importe.Value)
@@ -197,9 +197,9 @@ Public Class PagarMacro
         Producto.Value = ConfigurationManager.AppSettings("descClientePagoMacro")
 
         'asignamos valores a url de retorno 
-        Dim callback_Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoExitoso.aspx?preferenceMacro=" & Hash.Value & "&TransaccionComercioID=" & TransaccionComercioID.Value))
-        Dim callback_Cancel = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoRechazado.aspx?preferenceMacro=" & Hash.Value))
-        Dim callback_Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoPendiente.aspx?preferenceMacro=" & Hash.Value & "&TransaccionComercioID=" & TransaccionComercioID.Value))
+        Dim callback_Success = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoExitoso.aspx?idPago=" & idPago & "&TransaccionComercioID=" & TransaccionComercioID.Value))
+        Dim callback_Cancel = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoRechazado.aspx?idPago=" & idPago))
+        Dim callback_Pending = Request.Url.GetLeftPart(UriPartial.Path).Replace("/PagarMacro", String.Format("/PagoPendiente.aspx?idPago=" & idPago & "&TransaccionComercioID=" & TransaccionComercioID.Value))
 
         'encriptamos los datos a enviar en el formulario post
         CallbackSuccess.Value = AESEncrypter.EncryptString(callback_Success, secretkey)
