@@ -162,7 +162,7 @@ Public Class _Default
                 botonPagoMacro.Style.Add("display", "none")
             End If
             If botonMercadoPago = False Then
-                Dim botonMPago As Button = CType(e.Row.FindControl("btnPagar"), Button)
+                Dim botonMPago As Button = CType(e.Row.FindControl("btnPagarMP"), Button)
                 botonMPago.Style.Add("display", "none")
             End If
         End If
